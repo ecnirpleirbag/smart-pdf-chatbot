@@ -1,0 +1,96 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [windows-latest, ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          cd ..
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Node.js dependencies
+        run: |
+          cd PDFChatBot
+          npm install
+          cd ..
+
+      - name: Install system dependencies
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev build-essential curl wget libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+          sudo apt-get install -y tesseract-ocr
+          sudo apt-get install -y poppler-utils
+
+      - name: Install Tesseract (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: |
+          choco install tesseract
+          choco install poppler
+
+      - name: Install Tesseract (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          brew install tesseract
+          brew install poppler
+
+      - name: Build Tauri app
+        run: |
+          cd PDFChatBot
+          npm run tauri build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdfchatbot-${{ matrix.platform }}
+          path: |
+            PDFChatBot/src-tauri/target/release/bundle/
+            backend/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/pdfchatbot-windows-latest/**/*.exe
+            artifacts/pdfchatbot-windows-latest/**/*.msi
+            artifacts/pdfchatbot-ubuntu-latest/**/*.AppImage
+            artifacts/pdfchatbot-ubuntu-latest/**/*.deb
+            artifacts/pdfchatbot-macos-latest/**/*.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

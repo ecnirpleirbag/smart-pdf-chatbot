@@ -1,0 +1,20 @@
+{
+  "version": "0.2.1",
+  "tasks": [
+    {
+      "taskLabel": "task-processor_bindings.cp313-win_amd64",
+      "appliesTo": "backend/processor_bindings.cp313-win_amd64.pyd",
+      "type": "launch"
+    },
+    {
+      "taskLabel": "task-backend",
+      "appliesTo": "backend/",
+      "type": "launch"
+    },
+    {
+      "taskLabel": "task-CMakeLists",
+      "appliesTo": "backend/CMakeLists.txt",
+      "type": "launch"
+    }
+  ]
+}
